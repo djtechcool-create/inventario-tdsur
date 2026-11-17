@@ -176,7 +176,7 @@ fun FramedViewfinder(frame: FrameStyle, modifier: Modifier = Modifier, content: 
         // Tamaños relativos al ancho de la foto (igual que en FilmRenderer)
         val (sideF, topF, bottomF) = when (frame) {
             FrameStyle.NONE -> Triple(0f, 0f, 0f)
-            FrameStyle.SCAN -> Triple(0.048f, 0.048f, 0.048f)
+            FrameStyle.SCAN -> Triple(0.02f, 0.02f, 0.02f)
             FrameStyle.POLAROID -> Triple(0.06f, 0.06f, 0.24f)
             FrameStyle.FILM35 -> Triple(0.14f, 0.03f, 0.03f)
         }
@@ -190,7 +190,7 @@ fun FramedViewfinder(frame: FrameStyle, modifier: Modifier = Modifier, content: 
         val bg = when (frame) {
             FrameStyle.POLAROID -> Color(0xFFF4F0E8)
             FrameStyle.FILM35 -> Color(0xFF12100E)
-            FrameStyle.SCAN -> Color(0xFFF3F1EC)
+            FrameStyle.SCAN -> Color(0xFFFAFAF8)
             FrameStyle.NONE -> Color.Transparent
         }
         Box(
@@ -220,12 +220,12 @@ fun FramedViewfinder(frame: FrameStyle, modifier: Modifier = Modifier, content: 
 
 /** Marco negro de la película dentro del papel blanco del escáner. */
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScanFilm(photoW: Float) {
-    val paper = photoW * 0.026f
+    val paper = photoW * 0.011f
     drawRoundRect(
         Color(0xFF100E0C),
         Offset(paper, paper),
         Size(size.width - paper * 2, size.height - paper * 2),
-        CornerRadius(photoW * 0.006f),
+        CornerRadius(photoW * 0.004f),
     )
 }
 
