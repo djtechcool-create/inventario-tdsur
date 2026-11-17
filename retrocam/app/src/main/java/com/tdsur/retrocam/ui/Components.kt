@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -48,12 +49,8 @@ import androidx.compose.ui.unit.sp
 import com.tdsur.retrocam.film.FilmLook
 import com.tdsur.retrocam.film.FilmLooks
 import com.tdsur.retrocam.film.FrameStyle
-import com.tdsur.retrocam.film.LeakGenerator
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import kotlin.math.exp
-import kotlin.math.hypot
-import kotlin.math.max
 
 val Accent = Color(0xFFFF8A1E)
 val Cream = Color(0xFFF2E8D5)
@@ -75,8 +72,15 @@ fun RetroCamTheme(content: @Composable () -> Unit) {
     )
 }
 
+enum class CaptureMode(val label: String) { PHOTO("FOTO"), VHS("VIDEO VHS") }
+
 /** Estado compartido entre la cámara y el editor. */
 class StudioState {
+    var mode by mutableStateOf(CaptureMode.PHOTO)
+    /** Desgaste de la cinta VHS: 0 = cinta nueva, 1 = muy gastada. */
+    var vhsDamage by mutableStateOf(0.35f)
+    var vhsOsd by mutableStateOf(true)
+
     var look by mutableStateOf(FilmLooks.DORADO)
         private set
     var dateStamp by mutableStateOf(FilmLooks.DORADO.defaultDate)
@@ -167,7 +171,7 @@ fun OptionChip(label: String, active: Boolean, onClick: () -> Unit) {
  * El contenido interior siempre tiene proporción 3:4.
  */
 @Composable
-fun FramedViewfinder(frame: FrameStyle, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun FramedViewfinder(frame: FrameStyle, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
         // Tamaños relativos al ancho de la foto (igual que en FilmRenderer)
         val (sideF, topF, bottomF) = when (frame) {
@@ -226,70 +230,23 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSprockets(band:
     }
 }
 
-/**
- * Capas que se dibujan sobre la vista previa: viñeta, fugas de luz y fecha.
- * Coinciden con lo que [com.tdsur.retrocam.film.FilmRenderer] dibuja en la foto final.
- */
+/** Fecha naranja sobre la vista previa (en la foto final la dibuja FilmRenderer). */
 @Composable
-fun FilmOverlay(look: FilmLook, intensity: Float, seed: Long, dateStamp: Boolean, modifier: Modifier = Modifier) {
-    val leaks = remember(look.leak, seed) { LeakGenerator.generate(look.leak, seed) }
+fun DateOverlay(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize()) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    val w = size.width
-                    val h = size.height
-                    val long = max(w, h)
-                    // Fugas de luz
-                    for (lk in leaks) {
-                        val r = lk.radius * long * 1.6f
-                        val base = Color(lk.color.r, lk.color.g, lk.color.b)
-                        val stops = listOf(0f, 0.25f, 0.5f, 0.75f, 1f).map { x ->
-                            val a = (lk.strength * intensity * exp(-2f * (x * 1.6f) * (x * 1.6f))).coerceIn(0f, 1f)
-                            x to base.copy(alpha = a)
-                        }
-                        drawRect(
-                            Brush.radialGradient(
-                                *stops.toTypedArray(),
-                                center = Offset(lk.cx * w, lk.cy * h),
-                                radius = r,
-                            )
-                        )
-                    }
-                    // Viñeta: alfa = vignette * smoothstep(0.35, 1, d)
-                    val v = look.vignette * intensity
-                    if (v > 0f) {
-                        val black = Color.Black
-                        drawRect(
-                            Brush.radialGradient(
-                                0f to black.copy(alpha = 0f),
-                                0.35f to black.copy(alpha = 0f),
-                                0.6f to black.copy(alpha = v * 0.33f),
-                                0.8f to black.copy(alpha = v * 0.77f),
-                                1f to black.copy(alpha = v),
-                                center = Offset(w / 2f, h / 2f),
-                                radius = hypot(w, h) / 2f,
-                            )
-                        )
-                    }
-                }
+        Text(
+            LocalDate.now().format(DateTimeFormatter.ofPattern("''yy MM dd")),
+            color = Accent,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            letterSpacing = 1.sp,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                shadow = androidx.compose.ui.graphics.Shadow(Color(0xCCFF5A00), blurRadius = 10f)
+            ),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 18.dp, bottom = 16.dp),
         )
-        if (dateStamp) {
-            Text(
-                LocalDate.now().format(DateTimeFormatter.ofPattern("''yy MM dd")),
-                color = Accent,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                letterSpacing = 1.sp,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    shadow = androidx.compose.ui.graphics.Shadow(Color(0xCCFF5A00), blurRadius = 10f)
-                ),
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 18.dp, bottom = 16.dp),
-            )
-        }
     }
 }
