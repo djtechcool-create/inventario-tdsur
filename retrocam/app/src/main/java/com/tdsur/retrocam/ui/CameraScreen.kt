@@ -156,7 +156,7 @@ private fun CameraContent(state: StudioState, onOpenGallery: () -> Unit) {
     var provider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
 
     LaunchedEffect(lensFacing) {
-        val p = ProcessCameraProvider.awaitInstance(context)
+        val p = cameraProvider(context)
         provider = p
         val preview = Preview.Builder().setResolutionSelector(resolution).build()
         preview.setSurfaceProvider(previewView.surfaceProvider)
@@ -327,6 +327,18 @@ private fun CameraContent(state: StudioState, onOpenGallery: () -> Unit) {
         }
     }
 }
+
+private suspend fun cameraProvider(context: Context): ProcessCameraProvider =
+    suspendCancellableCoroutine { cont ->
+        val future = ProcessCameraProvider.getInstance(context)
+        future.addListener({
+            try {
+                cont.resume(future.get())
+            } catch (e: Exception) {
+                cont.resumeWithException(e)
+            }
+        }, ContextCompat.getMainExecutor(context))
+    }
 
 /** Toma una foto y la devuelve ya girada y reducida. */
 private suspend fun capture(
