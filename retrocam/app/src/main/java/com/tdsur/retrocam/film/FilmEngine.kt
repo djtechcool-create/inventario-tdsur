@@ -39,12 +39,27 @@ object FilmEngine {
         // 2. Mapas de luces para bloom y halación
         val glow = if (look.bloom > 0f || look.halation > 0f) GlowMaps.build(soft, w, h) else null
 
+        // 2b. Quitar el "contraste local" del HDR del celular (sin quitar el detalle fino):
+        // se mezcla un poco con una versión muy desenfocada.
+        val flatten = look.flatten * t
+        val wide = if (flatten > 0f) gaussianBlur(soft, w, h, 14f * unit) else null
+
         val lutR = curveLut(look.curveR, LUT_SIZE)
         val lutG = curveLut(look.curveG, LUT_SIZE)
         val lutB = curveLut(look.curveB, LUT_SIZE)
         val m = look.mix
         val mw = look.monoWeights
-        val gain = 2f.pow(look.exposure * 0.45f)
+        // Cada foto del rollo sale un poco distinta: exposición, tono del laboratorio, grano y viñeta.
+        val vr = kotlin.random.Random(opts.seed xor 0x7A3F1L)
+        val vAmt = if (look.id == FilmLooks.ORIGINAL.id) 0f else opts.variation
+        val expJitter = (vr.nextFloat() + vr.nextFloat() + vr.nextFloat() - 1.5f) * 0.4f * vAmt
+        val castR = (vr.nextFloat() - 0.5f) * 0.045f * vAmt
+        val castG = (vr.nextFloat() - 0.5f) * 0.03f * vAmt
+        val castB = (vr.nextFloat() - 0.5f) * 0.05f * vAmt
+        val grainAmt = look.grain * (1f + (max(0f, -expJitter) * 1.6f + vr.nextFloat() * 0.25f) * vAmt)
+        val vigMul = 1f + (vr.nextFloat() - 0.5f) * 0.8f * vAmt
+        val leakNoiseSeed = vr.nextInt()
+        val gain = 2f.pow((look.exposure + expJitter) * 0.45f)
         val leaks = LeakGenerator.generate(look.leak, opts.seed)
         val cx = (w - 1) / 2f
         val cy = (h - 1) / 2f
@@ -56,7 +71,7 @@ object FilmEngine {
         val wm1 = max(1, w - 1).toFloat()
         val hm1 = max(1, h - 1).toFloat()
         val lutMax = (LUT_SIZE - 1).toFloat()
-        val vignette = look.vignette + look.flash * 0.25f
+        val vignette = (look.vignette + look.flash * 0.25f) * vigMul
 
         // Filas en paralelo: aprovecha todos los núcleos del teléfono
         IntStream.range(0, h).parallel().forEach { y ->
@@ -77,6 +92,14 @@ object FilmEngine {
                 } else {
                     r = (sp shr 16 and 0xff) * inv
                     b = (sp and 0xff) * inv
+                }
+                if (wide != null) {
+                    val q = wide[i]
+                    // Solo se reduce la diferencia de brillo local, no el color
+                    val lw = (0.299f * (q shr 16 and 0xff) + 0.587f * (q shr 8 and 0xff) + 0.114f * (q and 0xff)) * inv
+                    val lc = 0.299f * r + 0.587f * g + 0.114f * b
+                    val dl = (lw - lc) * flatten
+                    r += dl; g += dl; b += dl
                 }
 
                 // 4. Exposición
@@ -112,9 +135,9 @@ object FilmEngine {
                 // 9. Tono dividido
                 val sh = (1f - l) * (1f - l)
                 val hi = l * l
-                r += look.shadowTint.r * sh + look.highlightTint.r * hi
-                g += look.shadowTint.g * sh + look.highlightTint.g * hi
-                b += look.shadowTint.b * sh + look.highlightTint.b * hi
+                r += look.shadowTint.r * sh + look.highlightTint.r * hi + castR
+                g += look.shadowTint.g * sh + look.highlightTint.g * hi + castG
+                b += look.shadowTint.b * sh + look.highlightTint.b * hi + castB
 
                 // 10. Bloom y halación
                 if (glow != null) {
@@ -149,7 +172,9 @@ object FilmEngine {
                     val ly = (y - lk.cy * h) / longSide
                     val dd = (lx * lx + ly * ly) / (lk.radius * lk.radius)
                     if (dd < 6f) {
-                        val f = lk.strength * exp(-2f * dd)
+                        // Forma irregular, no una mancha redonda perfecta
+                        val shape = 0.35f + 1.3f * valueNoise(x / (longSide * 0.07f), y / (longSide * 0.07f), leakNoiseSeed + k)
+                        val f = (lk.strength * exp(-2f * dd) * shape).coerceIn(0f, 1f)
                         r = 1f - (1f - clamp01(r)) * (1f - lk.color.r * f)
                         g = 1f - (1f - clamp01(g)) * (1f - lk.color.g * f)
                         b = 1f - (1f - clamp01(b)) * (1f - lk.color.b * f)
@@ -163,9 +188,9 @@ object FilmEngine {
                 }
 
                 // 14. Grano: más visible en tonos medios, con un poco de color
-                if (look.grain > 0f) {
+                if (grainAmt > 0f) {
                     l = clamp01(0.299f * r + 0.587f * g + 0.114f * b)
-                    val weight = (0.35f + 2.6f * l * (1f - l)) * look.grain
+                    val weight = (0.35f + 2.6f * l * (1f - l)) * grainAmt
                     val nl = grainNoise(x, y, grainPx, seedI)
                     val gc = look.grainColor
                     r += (nl + gc * (hash(x, y, seedI + 11) - 0.5f) * 1.6f) * weight

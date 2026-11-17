@@ -60,6 +60,8 @@ data class FilmLook(
     val satRollLo: Float = 0.2f,
     val shadowTint: Rgb = Rgb.ZERO,
     val highlightTint: Rgb = Rgb.ZERO,
+    /** Cuánto se reduce el contraste local del HDR del celular (0..1). */
+    val flatten: Float = 0.3f,
     /** Pérdida de nitidez (radio en píxeles, para una foto de 1500 px). Poca: el rollo escaneado es nítido. */
     val softness: Float = 0.35f,
     /** Separación de colores en las orillas (lentes baratos). */
@@ -96,6 +98,8 @@ data class RenderOptions(
     val frame: FrameStyle = FrameStyle.NONE,
     val seed: Long = 1L,
     val date: LocalDate = LocalDate.now(),
+    /** Cuánto varía cada foto respecto a la anterior (0 = todas iguales, 1 = como un rollo real). */
+    val variation: Float = 1f,
 )
 
 object FilmLooks {
@@ -103,7 +107,7 @@ object FilmLooks {
         id = "original", name = "Original", description = "Sin filtro",
         swatch = 0xFF9E9E9E,
         satRollHi = 0f, satRollLo = 0f, softness = 0f, aberration = 0f, bloom = 0f, halation = 0f,
-        grain = 0f, vignette = 0f,
+        grain = 0f, vignette = 0f, flatten = 0f,
     )
 
     val DORADO = FilmLook(
@@ -115,10 +119,10 @@ object FilmLooks {
             -0.03f, 1.05f, -0.02f,
             -0.02f, -0.06f, 1.08f,
         ),
-        curveR = ToneCurve(0f, 0.05f, 0.25f, 0.27f, 0.5f, 0.58f, 0.75f, 0.84f, 1f, 0.98f),
-        curveG = ToneCurve(0f, 0.045f, 0.25f, 0.245f, 0.5f, 0.53f, 0.75f, 0.80f, 1f, 0.96f),
-        curveB = ToneCurve(0f, 0.08f, 0.25f, 0.22f, 0.5f, 0.44f, 0.75f, 0.68f, 1f, 0.86f),
-        saturation = 1.12f,
+        curveR = ToneCurve(0f, 0.07f, 0.25f, 0.29f, 0.5f, 0.58f, 0.75f, 0.83f, 1f, 0.97f),
+        curveG = ToneCurve(0f, 0.065f, 0.25f, 0.265f, 0.5f, 0.535f, 0.75f, 0.79f, 1f, 0.95f),
+        curveB = ToneCurve(0f, 0.09f, 0.25f, 0.245f, 0.5f, 0.46f, 0.75f, 0.69f, 1f, 0.86f),
+        saturation = 1.0f,
         softness = 0.4f, bloom = 0.12f, halation = 0.3f,
         grain = 0.045f, vignette = 0.2f, leak = 0.15f,
         defaultFrame = FrameStyle.SCAN,
@@ -134,10 +138,10 @@ object FilmLooks {
             -0.05f, 1.06f, -0.01f,
             -0.03f, 0.02f, 1.01f,
         ),
-        curveR = ToneCurve(0f, 0.035f, 0.25f, 0.21f, 0.5f, 0.54f, 0.75f, 0.84f, 1f, 0.99f),
-        curveG = ToneCurve(0f, 0.05f, 0.25f, 0.245f, 0.5f, 0.54f, 0.75f, 0.81f, 1f, 0.97f),
-        curveB = ToneCurve(0f, 0.08f, 0.25f, 0.27f, 0.5f, 0.52f, 0.75f, 0.76f, 1f, 0.93f),
-        saturation = 1.28f, satRollHi = 0.55f, satRollLo = 0.1f,
+        curveR = ToneCurve(0f, 0.06f, 0.25f, 0.25f, 0.5f, 0.55f, 0.75f, 0.82f, 1f, 0.97f),
+        curveG = ToneCurve(0f, 0.07f, 0.25f, 0.27f, 0.5f, 0.54f, 0.75f, 0.80f, 1f, 0.96f),
+        curveB = ToneCurve(0f, 0.09f, 0.25f, 0.28f, 0.5f, 0.52f, 0.75f, 0.75f, 1f, 0.92f),
+        saturation = 1.06f, satRollHi = 0.55f, satRollLo = 0.2f,
         softness = 0.35f, bloom = 0.1f, halation = 0.25f,
         grain = 0.045f, vignette = 0.18f,
         defaultFrame = FrameStyle.SCAN,
@@ -156,7 +160,7 @@ object FilmLooks {
         curveR = ToneCurve(0f, 0.10f, 0.25f, 0.33f, 0.5f, 0.60f, 0.75f, 0.83f, 1f, 0.97f),
         curveG = ToneCurve(0f, 0.10f, 0.25f, 0.31f, 0.5f, 0.56f, 0.75f, 0.79f, 1f, 0.93f),
         curveB = ToneCurve(0f, 0.13f, 0.25f, 0.32f, 0.5f, 0.53f, 0.75f, 0.73f, 1f, 0.86f),
-        saturation = 0.82f, satRollHi = 0.6f, satRollLo = 0.25f,
+        saturation = 0.78f, satRollHi = 0.6f, satRollLo = 0.3f,
         softness = 0.45f, bloom = 0.25f, halation = 0.3f,
         grain = 0.05f, vignette = 0.22f,
         defaultFrame = FrameStyle.SCAN,
@@ -174,7 +178,7 @@ object FilmLooks {
         curveR = ToneCurve(0f, 0.06f, 0.25f, 0.30f, 0.5f, 0.58f, 0.75f, 0.81f, 1f, 0.96f),
         curveG = ToneCurve(0f, 0.055f, 0.25f, 0.28f, 0.5f, 0.55f, 0.75f, 0.785f, 1f, 0.95f),
         curveB = ToneCurve(0f, 0.07f, 0.25f, 0.27f, 0.5f, 0.51f, 0.75f, 0.73f, 1f, 0.90f),
-        saturation = 0.95f, satRollHi = 0.6f, satRollLo = 0.3f,
+        saturation = 0.88f, satRollHi = 0.6f, satRollLo = 0.3f,
         softness = 0.45f, bloom = 0.15f, halation = 0.15f,
         grain = 0.04f, vignette = 0.15f,
         defaultFrame = FrameStyle.SCAN,
@@ -208,7 +212,7 @@ object FilmLooks {
         curveR = ToneCurve(0f, 0.05f, 0.25f, 0.23f, 0.5f, 0.51f, 0.75f, 0.80f, 1f, 0.97f),
         curveG = ToneCurve(0f, 0.07f, 0.25f, 0.27f, 0.5f, 0.54f, 0.75f, 0.79f, 1f, 0.95f),
         curveB = ToneCurve(0f, 0.09f, 0.25f, 0.27f, 0.5f, 0.52f, 0.75f, 0.77f, 1f, 0.94f),
-        saturation = 1.05f,
+        saturation = 0.95f,
         softness = 0.35f, bloom = 0.1f, halation = 0.15f,
         grain = 0.04f, vignette = 0.18f,
         defaultFrame = FrameStyle.SCAN,
@@ -221,7 +225,7 @@ object FilmLooks {
         curveR = ToneCurve(0f, 0.03f, 0.25f, 0.22f, 0.5f, 0.56f, 0.75f, 0.86f, 1f, 0.98f),
         curveG = ToneCurve(0f, 0.03f, 0.25f, 0.21f, 0.5f, 0.52f, 0.75f, 0.82f, 1f, 0.96f),
         curveB = ToneCurve(0f, 0.06f, 0.25f, 0.21f, 0.5f, 0.47f, 0.75f, 0.74f, 1f, 0.90f),
-        saturation = 1.2f,
+        saturation = 1.08f,
         softness = 0.8f, aberration = 0.003f, bloom = 0.12f, halation = 0.3f,
         grain = 0.065f, vignette = 0.5f, flash = 0.4f, leak = 0.45f,
         defaultDate = true,
