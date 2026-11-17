@@ -105,7 +105,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.random.Random
 
-private const val MAX_PHOTO_SIZE = 2048
+private const val MAX_PHOTO_SIZE = 3000
 
 @Composable
 fun CameraScreen(state: StudioState, onOpenGallery: () -> Unit) {

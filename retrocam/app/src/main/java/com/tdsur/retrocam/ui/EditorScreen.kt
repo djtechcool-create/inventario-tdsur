@@ -57,7 +57,7 @@ import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
 private const val PREVIEW_SIZE = 1000
-private const val FULL_SIZE = 2048
+private const val FULL_SIZE = 3000
 
 @Composable
 fun EditorScreen(uri: Uri, state: StudioState, onClose: () -> Unit) {

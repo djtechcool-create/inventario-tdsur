@@ -5,10 +5,10 @@ App de cámara para Android con filtros que imitan fotos antiguas y de rollo.
 ## Funciones
 - **Vista previa en vivo** con el filtro aplicado en la GPU (OpenGL ES), en cualquier Android 10+.
 - **Modo VIDEO VHS**: graba video con look de cinta VHS (color corrido, baja resolución, banda de tracking, ruido de cabezas, nieve, líneas de barrido y textos PLAY/hora/fecha). Opción de cinta nueva o gastada. Los videos se guardan en `Películas/RetroCam`.
-- **8 filtros**: Dorado 200, Retrato 400, Cine 800T, Verde 100, Desechable 98, Instantánea, Plata B&N y Sepia 1920.
+- **10 filtros**: Dorado 200, Verano 400, Atardecer, Retrato 400, Cine 800T, Verde 100, Desechable 98, Instantánea, Plata B&N y Sepia 1920.
 - Emulación de rollo: curvas por canal, mezcla de tintes, saturación que cae en luces y sombras, suavidad, aberración cromática, bloom, halación, grano con color, viñeta, flash, fugas de luz, polvo y rayones.
 - **Fecha estampada** naranja, al estilo `'26 11 17`.
-- **Marcos**: instantánea (borde blanco) y negativo de 35mm con perforaciones.
+- **Marcos**: escaneo (marco negro irregular de la película sobre el papel del escáner, con luz que se cuela por la orilla), instantánea y negativo de 35mm con perforaciones.
 - **Editor** para aplicar los filtros a fotos de la galería, con control de intensidad y botón 🎲 para variar fugas, grano y polvo.
 - Cada foto sale un poco distinta: las fugas de luz, el grano y el polvo cambian en cada disparo.
 - Las fotos se guardan en `Imágenes/RetroCam`.

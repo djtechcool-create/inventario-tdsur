@@ -20,7 +20,7 @@ import kotlin.random.Random
  */
 object FilmRenderer {
 
-    fun render(source: Bitmap, opts: RenderOptions, maxSize: Int = 2048): Bitmap {
+    fun render(source: Bitmap, opts: RenderOptions, maxSize: Int = 3000): Bitmap {
         val src = prepare(source, maxSize)
         val w = src.width
         val h = src.height
@@ -132,6 +132,7 @@ object FilmRenderer {
 
     private fun applyFrame(img: Bitmap, frame: FrameStyle, seed: Long): Bitmap = when (frame) {
         FrameStyle.NONE -> img
+        FrameStyle.SCAN -> scan(img, seed)
         FrameStyle.POLAROID -> polaroid(img)
         FrameStyle.FILM35 -> if (img.width >= img.height) {
             film35(img, seed)
@@ -143,6 +144,17 @@ object FilmRenderer {
 
     private fun rotate(bmp: Bitmap, deg: Float): Bitmap =
         Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, Matrix().apply { postRotate(deg) }, true)
+
+    private fun scan(img: Bitmap, seed: Long): Bitmap {
+        val w = img.width
+        val h = img.height
+        val px = IntArray(w * h)
+        img.getPixels(px, 0, w, 0, 0, w, h)
+        val r = ScanBorder.apply(px, w, h, seed)
+        val out = Bitmap.createBitmap(r.width, r.height, Bitmap.Config.ARGB_8888)
+        out.setPixels(r.pixels, 0, r.width, 0, 0, r.width, r.height)
+        return out
+    }
 
     private fun polaroid(img: Bitmap): Bitmap {
         val m = min(img.width, img.height)

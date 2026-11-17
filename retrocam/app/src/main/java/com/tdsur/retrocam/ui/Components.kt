@@ -176,6 +176,7 @@ fun FramedViewfinder(frame: FrameStyle, modifier: Modifier = Modifier, content: 
         // Tamaños relativos al ancho de la foto (igual que en FilmRenderer)
         val (sideF, topF, bottomF) = when (frame) {
             FrameStyle.NONE -> Triple(0f, 0f, 0f)
+            FrameStyle.SCAN -> Triple(0.048f, 0.048f, 0.048f)
             FrameStyle.POLAROID -> Triple(0.06f, 0.06f, 0.24f)
             FrameStyle.FILM35 -> Triple(0.14f, 0.03f, 0.03f)
         }
@@ -189,6 +190,7 @@ fun FramedViewfinder(frame: FrameStyle, modifier: Modifier = Modifier, content: 
         val bg = when (frame) {
             FrameStyle.POLAROID -> Color(0xFFF4F0E8)
             FrameStyle.FILM35 -> Color(0xFF12100E)
+            FrameStyle.SCAN -> Color(0xFFF3F1EC)
             FrameStyle.NONE -> Color.Transparent
         }
         Box(
@@ -197,6 +199,7 @@ fun FramedViewfinder(frame: FrameStyle, modifier: Modifier = Modifier, content: 
                 .height(photoW * totalH)
                 .background(bg)
                 .then(if (frame == FrameStyle.FILM35) Modifier.drawBehind { drawSprockets(photoW.toPx() * 0.14f) } else Modifier)
+                .then(if (frame == FrameStyle.SCAN) Modifier.drawBehind { drawScanFilm(photoW.toPx()) } else Modifier)
                 .padding(
                     start = photoW * sideF,
                     end = photoW * sideF,
@@ -208,11 +211,22 @@ fun FramedViewfinder(frame: FrameStyle, modifier: Modifier = Modifier, content: 
                 Modifier
                     .fillMaxSize()
                     .aspectRatio(3f / 4f)
-                    .clip(RoundedCornerShape(if (frame == FrameStyle.NONE) 6.dp else 0.dp))
+                    .clip(RoundedCornerShape(if (frame == FrameStyle.NONE || frame == FrameStyle.SCAN) 6.dp else 0.dp))
                     .background(Color.Black)
             ) { content() }
         }
     }
+}
+
+/** Marco negro de la película dentro del papel blanco del escáner. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScanFilm(photoW: Float) {
+    val paper = photoW * 0.026f
+    drawRoundRect(
+        Color(0xFF100E0C),
+        Offset(paper, paper),
+        Size(size.width - paper * 2, size.height - paper * 2),
+        CornerRadius(photoW * 0.006f),
+    )
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSprockets(band: Float) {

@@ -66,22 +66,22 @@ void main() {
     d.x += jitter;
 
     // Luminancia con poca resolución + halo de nitidez típico del VHS
-    float lp = 1.0 / 340.0;
-    float Y = luma(d + vec2(-2.0 * lp, 0.0)) * 0.12
-            + luma(d + vec2(-lp, 0.0)) * 0.22
-            + luma(d) * 0.32
-            + luma(d + vec2(lp, 0.0)) * 0.22
-            + luma(d + vec2(2.0 * lp, 0.0)) * 0.12;
-    float Yw = (luma(d + vec2(-5.0 * lp, 0.0)) + luma(d + vec2(5.0 * lp, 0.0))) * 0.5;
-    Y = Y + (Y - Yw) * 0.45;
+    float lp = 1.0 / 720.0;
+    float Y = luma(d + vec2(-2.0 * lp, 0.0)) * 0.08
+            + luma(d + vec2(-lp, 0.0)) * 0.18
+            + luma(d) * 0.48
+            + luma(d + vec2(lp, 0.0)) * 0.18
+            + luma(d + vec2(2.0 * lp, 0.0)) * 0.08;
+    float Yw = (luma(d + vec2(-4.0 * lp, 0.0)) + luma(d + vec2(4.0 * lp, 0.0))) * 0.5;
+    Y = Y + (Y - Yw) * 0.35;
 
     // Color muy borroso y corrido a la derecha
     vec2 C = vec2(0.0);
-    float cp = 1.0 / 90.0;
+    float cp = 1.0 / 180.0;
     for (int i = -3; i <= 3; i++) {
-        C += rgb2yiq(samp(d + vec2(float(i) * cp * 0.5 - 0.004 - 0.004 * dmg, 0.0))).yz;
+        C += rgb2yiq(samp(d + vec2(float(i) * cp * 0.5 - 0.0025 - 0.003 * dmg, 0.0))).yz;
     }
-    C = C / 7.0 * 1.35;
+    C = C / 7.0 * 1.3;
     C += (vec2(hash(vec2(line * 0.5, frame)), hash(vec2(line * 0.5 + 3.0, frame))) - 0.5) * 0.03 * (0.5 + dmg);
 
     vec3 col = yiq2rgb(vec3(Y, C));
@@ -91,7 +91,7 @@ void main() {
 
     // Nieve
     float n = hash(d * uDispRes + vec2(frame * 13.0, frame * 7.0)) - 0.5;
-    col += n * (0.05 + 0.06 * dmg);
+    col += n * (0.035 + 0.05 * dmg);
 
     // Rayas blancas en la banda de tracking y abajo
     float streak = step(0.975 - 0.02 * dmg, hash(vec2(floor(d.x * 90.0), line + frame * 3.0)));
@@ -99,7 +99,7 @@ void main() {
     col = mix(col, vec3(dot(col, vec3(0.3333))), band * 0.5);
 
     // Líneas de barrido
-    col *= 0.94 + 0.06 * sin(y * lines * 6.2831);
+    col *= 0.96 + 0.04 * sin(y * lines * 6.2831);
 
     // Orillas más oscuras
     vec2 q = d - 0.5;
