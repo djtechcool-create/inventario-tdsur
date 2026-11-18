@@ -5,7 +5,7 @@ App de cámara para Android con filtros que imitan fotos antiguas y de rollo.
 ## Funciones
 - **Vista previa en vivo** con el filtro aplicado en la GPU (OpenGL ES), en cualquier Android 10+.
 - **Modo VIDEO VHS**: graba video con look de cinta VHS (color corrido, baja resolución, banda de tracking, ruido de cabezas, nieve, líneas de barrido y textos PLAY/hora/fecha). Opción de cinta nueva o gastada. Los videos se guardan en `Películas/RetroCam`.
-- **26 rollos** en 5 categorías: Color (Portra 160/400/400 +2/800, Gold 200, ColorPlus 200, UltraMax 400, Ektar 100, Superia 400, Fujicolor C200, Pro 400H, Lomo 800, Rollo caducado), Cine (CineStill 800T y 50D, Vision3 500T), Diapositiva (Velvia 50, Ektachrome E100), Blanco y negro (Tri-X 400, HP5 Plus 400, T-Max 100, Delta 3200) e Instantánea y más (Polaroid 600, Instax Mini, FunSaver 800, Sepia 1920).
+- **97 filtros de rollos reales** en 7 categorías: Color, Cine, Diapositiva, Blanco y negro, Instantánea, Desechables y vintage, y Experimental (Kodak Portra, Gold, Ektar, Kodachrome, Fujifilm Superia, Velvia, Provia, Agfa Vista, Konica, Ilford HP5, Delta, Tri-X, CineStill, Polaroid, Instax, LomoChrome, Aerochrome, Redscale y muchos más).
 - Sonido y vibración al tomar fotos y grabar; el revelado ocurre en segundo plano.
 - Emulación de rollo: curvas por canal, mezcla de tintes, saturación que cae en luces y sombras, suavidad, aberración cromática, bloom, halación, grano con color, viñeta, flash, fugas de luz, polvo y rayones.
 - **Fecha estampada** naranja, al estilo `'26 11 17`.

@@ -27,7 +27,9 @@ enum class LookCategory(val label: String) {
     CINE("Cine"),
     SLIDE("Diapositiva"),
     BW("Blanco y negro"),
-    OTHER("Instantánea y más"),
+    INSTANT("Instantánea"),
+    VINTAGE("Desechables y vintage"),
+    EXPERIMENTAL("Experimental"),
 }
 
 /** Curva de tono: pares (x, y) en 0..1, de izquierda a derecha. */
@@ -121,7 +123,8 @@ object FilmLooks {
     private val CINE = LookCategory.CINE
     private val SLIDE = LookCategory.SLIDE
     private val BW = LookCategory.BW
-    private val OTHER = LookCategory.OTHER
+    private val INSTANT = LookCategory.INSTANT
+    private val VINTAGE = LookCategory.VINTAGE
     private val SCAN = FrameStyle.SCAN
 
     val ORIGINAL = FilmLook(
@@ -403,7 +406,7 @@ object FilmLooks {
 
     val POLAROID_600 = FilmLook(
         id = "polaroid600", name = "Polaroid 600", description = "Instantánea con marco blanco",
-        swatch = 0xFFB8D4D0, category = OTHER,
+        swatch = 0xFFB8D4D0, category = INSTANT,
         exposure = 0.15f,
         curveR = c(0f, 0.10f, 0.25f, 0.30f, 0.5f, 0.56f, 0.75f, 0.80f, 1f, 0.93f),
         curveG = c(0f, 0.13f, 0.25f, 0.33f, 0.5f, 0.57f, 0.75f, 0.80f, 1f, 0.92f),
@@ -415,7 +418,7 @@ object FilmLooks {
 
     val INSTAX = FilmLook(
         id = "instax", name = "Instax Mini", description = "Fujifilm instantánea · clara y fresca",
-        swatch = 0xFFCFE3F0, category = OTHER,
+        swatch = 0xFFCFE3F0, category = INSTANT,
         exposure = 0.2f,
         curveR = c(0f, 0.07f, 0.25f, 0.29f, 0.5f, 0.57f, 0.75f, 0.82f, 1f, 0.97f),
         curveG = c(0f, 0.07f, 0.25f, 0.29f, 0.5f, 0.57f, 0.75f, 0.82f, 1f, 0.97f),
@@ -427,7 +430,7 @@ object FilmLooks {
 
     val FUNSAVER = FilmLook(
         id = "funsaver", name = "FunSaver 800", description = "Kodak desechable · flash y fecha",
-        swatch = 0xFFFF6A2A, category = OTHER,
+        swatch = 0xFFFF6A2A, category = VINTAGE,
         exposure = 0.1f,
         curveR = c(0f, 0.03f, 0.25f, 0.22f, 0.5f, 0.56f, 0.75f, 0.86f, 1f, 0.98f),
         curveG = c(0f, 0.03f, 0.25f, 0.21f, 0.5f, 0.52f, 0.75f, 0.82f, 1f, 0.96f),
@@ -440,7 +443,7 @@ object FilmLooks {
 
     val SEPIA = FilmLook(
         id = "sepia", name = "Sepia 1920", description = "Foto antigua con polvo y rayones",
-        swatch = 0xFF8C6A44, category = OTHER,
+        swatch = 0xFF8C6A44, category = VINTAGE,
         mono = 1f,
         curveR = c(0f, 0.13f, 0.3f, 0.33f, 0.6f, 0.69f, 1f, 0.95f),
         curveG = c(0f, 0.09f, 0.3f, 0.25f, 0.6f, 0.60f, 1f, 0.88f),
@@ -457,7 +460,7 @@ object FilmLooks {
         VELVIA_50, EKTACHROME,
         TRI_X_400, HP5, TMAX_100, DELTA_3200,
         POLAROID_600, INSTAX, FUNSAVER, SEPIA,
-    )
+    ) + ExtraStocks.all
 
     /** Filtros de una categoría (siempre con "Original" al inicio). */
     fun inCategory(category: LookCategory) = listOf(ORIGINAL) + all.filter { it.category == category && it != ORIGINAL }
