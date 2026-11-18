@@ -131,7 +131,8 @@ object ScanBorder {
         val leakG = rf(0.25f, 0.55f)
 
         val out = IntArray(ow * oh)
-        for (y in 0 until oh) {
+        // Filas en paralelo
+        java.util.stream.IntStream.range(0, oh).parallel().forEach { y ->
             val fy = y + 0.5f + cy0
             for (x in 0 until ow) {
                 val fx = x + 0.5f + cx0

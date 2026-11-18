@@ -7,6 +7,9 @@ on:
       - ".github/workflows/retrocam-android.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,8 +25,23 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Compilar APK
         run: ./gradlew assembleRelease --stacktrace
-      - name: Subir APK
+      - name: Preparar APK
+        run: cp app/build/outputs/apk/release/app-release.apk RetroCam.apk
+      - name: Subir APK como artefacto
         uses: actions/upload-artifact@v4
         with:
           name: RetroCam-apk
-          path: retrocam/app/build/outputs/apk/release/*.apk
+          path: retrocam/RetroCam.apk
+      # Publica siempre en el mismo enlace:
+      # https://github.com/<dueño>/<repo>/releases/download/retrocam-latest/RetroCam.apk
+      - name: Publicar en el enlace fijo de descarga
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="Versión 1.${GITHUB_RUN_NUMBER} · $(git log -1 --pretty=%s) · $(date -u '+%Y-%m-%d %H:%M UTC')"
+          if gh release view retrocam-latest > /dev/null 2>&1; then
+            gh release edit retrocam-latest --title "RetroCam 1.${GITHUB_RUN_NUMBER}" --notes "$NOTES"
+          else
+            gh release create retrocam-latest --title "RetroCam 1.${GITHUB_RUN_NUMBER}" --notes "$NOTES" --target "$GITHUB_SHA" --latest=false
+          fi
+          gh release upload retrocam-latest RetroCam.apk --clobber

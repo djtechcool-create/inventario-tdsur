@@ -185,7 +185,7 @@ fun EditorScreen(uri: Uri, state: StudioState, onClose: () -> Unit) {
             OptionChip(state.frame.label, state.frame != FrameStyle.NONE) { state.frame = state.frame.next() }
         }
         Spacer(Modifier.height(8.dp))
-        LookCarousel(selected = state.look, onSelect = { state.select(it) }, thumbnails = thumbnails)
+        LookPicker(state, thumbnails = thumbnails)
         Spacer(Modifier.size(16.dp))
     }
 }

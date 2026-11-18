@@ -42,7 +42,7 @@ object FilmEngine {
         // 2b. Quitar el "contraste local" del HDR del celular (sin quitar el detalle fino):
         // se mezcla un poco con una versión muy desenfocada.
         val flatten = look.flatten * t
-        val wide = if (flatten > 0f) gaussianBlur(soft, w, h, 14f * unit) else null
+        val wide = if (flatten > 0f) GlowMaps.localMean(soft, w, h) else null
 
         val lutR = curveLut(look.curveR, LUT_SIZE)
         val lutG = curveLut(look.curveG, LUT_SIZE)
@@ -94,9 +94,8 @@ object FilmEngine {
                     b = (sp and 0xff) * inv
                 }
                 if (wide != null) {
-                    val q = wide[i]
                     // Solo se reduce la diferencia de brillo local, no el color
-                    val lw = (0.299f * (q shr 16 and 0xff) + 0.587f * (q shr 8 and 0xff) + 0.114f * (q and 0xff)) * inv
+                    val lw = wide.bloom(x / wm1, v)
                     val lc = 0.299f * r + 0.587f * g + 0.114f * b
                     val dl = (lw - lc) * flatten
                     r += dl; g += dl; b += dl
@@ -374,7 +373,7 @@ object FilmEngine {
 
     private fun boxBlurH(src: IntArray, dst: IntArray, w: Int, h: Int, r: Int) {
         val div = 2 * r + 1
-        for (y in 0 until h) {
+        IntStream.range(0, h).parallel().forEach { y ->
             val row = y * w
             var sr = 0; var sg = 0; var sb = 0
             for (k in -r..r) {
@@ -394,7 +393,7 @@ object FilmEngine {
 
     private fun boxBlurV(src: IntArray, dst: IntArray, w: Int, h: Int, r: Int) {
         val div = 2 * r + 1
-        for (x in 0 until w) {
+        IntStream.range(0, w).parallel().forEach { x ->
             var sr = 0; var sg = 0; var sb = 0
             for (k in -r..r) {
                 val p = src[k.coerceIn(0, h - 1) * w + x]
@@ -413,7 +412,7 @@ object FilmEngine {
 }
 
 /** Mapas pequeños y difuminados de las zonas brillantes. */
-private class GlowMaps(
+internal class GlowMaps(
     private val bloomMap: FloatArray,
     private val halMap: FloatArray,
     private val w: Int,
@@ -437,6 +436,41 @@ private class GlowMaps(
     }
 
     companion object {
+        /** Brillo promedio de la zona (mapa pequeño y muy difuminado). Se lee con [bloom]. */
+        fun localMean(px: IntArray, w: Int, h: Int): GlowMaps {
+            val f = max(1, max(w, h) / 240)
+            val sw = max(4, w / f)
+            val sh = max(4, h / f)
+            val lum = luminance(px, w, h, sw, sh)
+            repeat(3) { blur(lum, sw, sh, 2) }
+            return GlowMaps(lum, lum, sw, sh)
+        }
+
+        private fun luminance(px: IntArray, w: Int, h: Int, sw: Int, sh: Int): FloatArray {
+            val lum = FloatArray(sw * sh)
+            for (sy in 0 until sh) for (sx in 0 until sw) {
+                var sum = 0f
+                var n = 0
+                val y0 = sy * h / sh
+                val y1 = max(y0 + 1, (sy + 1) * h / sh)
+                val x0 = sx * w / sw
+                val x1 = max(x0 + 1, (sx + 1) * w / sw)
+                var yy = y0
+                while (yy < y1) {
+                    var xx = x0
+                    while (xx < x1) {
+                        val p = px[yy * w + xx]
+                        sum += 0.299f * (p shr 16 and 0xff) + 0.587f * (p shr 8 and 0xff) + 0.114f * (p and 0xff)
+                        n++
+                        xx += 2
+                    }
+                    yy += 2
+                }
+                lum[sy * sw + sx] = sum / max(1, n) / 255f
+            }
+            return lum
+        }
+
         fun build(px: IntArray, w: Int, h: Int): GlowMaps {
             val f = max(1, max(w, h) / 240)
             val sw = max(4, w / f)

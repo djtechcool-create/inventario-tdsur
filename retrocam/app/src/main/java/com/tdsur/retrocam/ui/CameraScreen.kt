@@ -10,6 +10,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Size
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,6 +24,7 @@ import androidx.camera.core.Preview
 import androidx.camera.core.UseCaseGroup
 import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.MediaStoreOutputOptions
@@ -67,6 +69,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -92,7 +95,9 @@ import com.tdsur.retrocam.film.FrameStyle
 import com.tdsur.retrocam.film.RenderOptions
 import com.tdsur.retrocam.gl.GlProcessor
 import com.tdsur.retrocam.gl.RetroEffect
+import com.tdsur.retrocam.util.CaptureFeedback
 import com.tdsur.retrocam.util.MediaUtils
+import com.tdsur.retrocam.util.PhotoLab
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -152,10 +157,15 @@ private fun CameraContent(state: StudioState, onOpenGallery: () -> Unit) {
 
     var lensFacing by remember { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
     var flashOn by remember { mutableStateOf(false) }
-    var busy by remember { mutableStateOf(false) }
-    var lastThumb by remember { mutableStateOf<Bitmap?>(null) }
-    var lastUri by remember { mutableStateOf<Uri?>(null) }
+    var capturing by remember { mutableStateOf(false) }
+    val developing by PhotoLab.pending.collectAsState()
+    val developed by PhotoLab.last.collectAsState()
+    val busy = capturing || developing >= PhotoLab.MAX_PENDING
+    var lastVideoUri by remember { mutableStateOf<Uri?>(null) }
     var lastIsVideo by remember { mutableStateOf(false) }
+    val lastThumb = if (lastIsVideo) null else developed?.thumbnail
+    val lastUri = if (lastIsVideo) lastVideoUri else developed?.uri
+    val feedback = remember { CaptureFeedback(context) }
     var recording by remember { mutableStateOf<Recording?>(null) }
     var recordSeconds by remember { mutableLongStateOf(0L) }
     // Semilla de la próxima foto: define fugas de luz, grano y polvo.
@@ -181,10 +191,18 @@ private fun CameraContent(state: StudioState, onOpenGallery: () -> Unit) {
             scaleType = PreviewView.ScaleType.FILL_CENTER
         }
     }
+    // Foto de ~8 MP: suficiente para 3000 px y mucho más rápida de procesar que el máximo del sensor
     val imageCapture = remember {
         ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-            .setResolutionSelector(resolution)
+            .setResolutionSelector(
+                ResolutionSelector.Builder()
+                    .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+                    .setResolutionStrategy(
+                        ResolutionStrategy(Size(3264, 2448), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER)
+                    )
+                    .build()
+            )
             .build()
     }
     // Video en calidad SD 4:3, como una cinta VHS
@@ -234,6 +252,7 @@ private fun CameraContent(state: StudioState, onOpenGallery: () -> Unit) {
             recording?.stop()
             provider?.unbindAll()
             captureExecutor.shutdown()
+            feedback.release()
         }
     }
     LaunchedEffect(flashOn) {
@@ -250,29 +269,23 @@ private fun CameraContent(state: StudioState, onOpenGallery: () -> Unit) {
 
     fun takePhoto() {
         if (busy) return
-        busy = true
+        capturing = true
+        feedback.shutter()
         val opts = RenderOptions(look = state.look, dateStamp = state.dateStamp, frame = state.frame, seed = seed)
         val mirror = lensFacing == CameraSelector.LENS_FACING_FRONT
+        seed = Random.nextLong()
         scope.launch {
             flash.snapTo(0.85f)
             launch { flash.animateTo(0f, tween(300)) }
             try {
                 val photo = capture(imageCapture, captureExecutor, mirror)
-                val result = withContext(Dispatchers.Default) { FilmRenderer.render(photo, opts, MAX_PHOTO_SIZE) }
-                val uri = MediaUtils.saveJpeg(context, result)
-                if (uri != null) {
-                    lastUri = uri
-                    lastIsVideo = false
-                    lastThumb = withContext(Dispatchers.Default) { MediaUtils.scaleToMax(result, 240) }
-                    Toast.makeText(context, "Guardada en Imágenes/RetroCam", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "No se pudo guardar la foto", Toast.LENGTH_SHORT).show()
-                }
+                lastIsVideo = false
+                // El revelado sigue en segundo plano; la cámara queda libre enseguida
+                PhotoLab.develop(context, photo, opts, MAX_PHOTO_SIZE)
             } catch (e: Exception) {
                 Toast.makeText(context, "Error al tomar la foto", Toast.LENGTH_SHORT).show()
             } finally {
-                seed = Random.nextLong()
-                busy = false
+                capturing = false
             }
         }
     }
@@ -280,9 +293,11 @@ private fun CameraContent(state: StudioState, onOpenGallery: () -> Unit) {
     fun toggleRecording() {
         val current = recording
         if (current != null) {
+            feedback.recordStop()
             current.stop()
             return
         }
+        feedback.recordStart()
         val name = "RetroCam_VHS_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
         val values = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, name)
@@ -306,9 +321,8 @@ private fun CameraContent(state: StudioState, onOpenGallery: () -> Unit) {
                 ) {
                     Toast.makeText(context, "No se pudo guardar el video", Toast.LENGTH_SHORT).show()
                 } else {
-                    lastUri = event.outputResults.outputUri
+                    lastVideoUri = event.outputResults.outputUri
                     lastIsVideo = true
-                    lastThumb = null
                     Toast.makeText(context, "Video guardado en Películas/RetroCam", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -427,7 +441,7 @@ private fun CameraContent(state: StudioState, onOpenGallery: () -> Unit) {
                     .align(Alignment.CenterHorizontally)
                     .padding(bottom = 8.dp),
             )
-            LookCarousel(selected = state.look, onSelect = { state.select(it) })
+            LookPicker(state)
         }
 
         // Controles inferiores
@@ -451,7 +465,9 @@ private fun CameraContent(state: StudioState, onOpenGallery: () -> Unit) {
                 contentAlignment = Alignment.Center,
             ) {
                 val thumb = lastThumb
-                if (thumb != null) {
+                if (developing > 0 && !isVideo) {
+                    CircularProgressIndicator(color = Accent, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                } else if (thumb != null) {
                     Image(
                         thumb.asImageBitmap(),
                         contentDescription = "Última foto",
@@ -493,7 +509,7 @@ private fun CameraContent(state: StudioState, onOpenGallery: () -> Unit) {
                         .clickable(enabled = !busy) { takePhoto() },
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (busy) CircularProgressIndicator(color = Accent, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
+                    if (capturing) CircularProgressIndicator(color = Accent, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
                 }
             }
 

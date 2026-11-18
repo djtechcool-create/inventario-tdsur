@@ -12,8 +12,21 @@ android {
         applicationId = "com.tdsur.retrocam"
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // En GitHub Actions cada compilación sube el número de versión automáticamente
+        val build = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
+        versionCode = build
+        versionName = "1.$build"
+    }
+
+    // Llave fija: así cada versión nueva se instala encima de la anterior sin desinstalar.
+    // (Es una app personal; para publicarla en Play Store usa una llave privada que no esté en el repositorio.)
+    signingConfigs {
+        create("retrocam") {
+            storeFile = file("retrocam.jks")
+            storePassword = "retrocam-2026"
+            keyAlias = "retrocam"
+            keyPassword = "retrocam-2026"
+        }
     }
 
     buildTypes {
@@ -21,9 +34,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
-            // Firmado con la llave de depuración para poder instalarlo directamente.
-            // Para publicar en Play Store, configura tu propia llave aquí.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("retrocam")
         }
     }
 
@@ -36,6 +47,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

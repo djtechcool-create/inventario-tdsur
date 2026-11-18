@@ -39,6 +39,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalView
+import android.view.HapticFeedbackConstants
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import com.tdsur.retrocam.film.FilmLook
 import com.tdsur.retrocam.film.FilmLooks
 import com.tdsur.retrocam.film.FrameStyle
+import com.tdsur.retrocam.film.LookCategory
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -81,10 +84,11 @@ class StudioState {
     var vhsDamage by mutableStateOf(0.35f)
     var vhsOsd by mutableStateOf(true)
 
-    var look by mutableStateOf(FilmLooks.DORADO)
+    var look by mutableStateOf(FilmLooks.PORTRA_400)
         private set
-    var dateStamp by mutableStateOf(FilmLooks.DORADO.defaultDate)
-    var frame by mutableStateOf(FilmLooks.DORADO.defaultFrame)
+    var category by mutableStateOf(LookCategory.COLOR)
+    var dateStamp by mutableStateOf(FilmLooks.PORTRA_400.defaultDate)
+    var frame by mutableStateOf(FilmLooks.PORTRA_400.defaultFrame)
 
     fun select(newLook: FilmLook) {
         look = newLook
@@ -93,9 +97,32 @@ class StudioState {
     }
 }
 
+/** Categorías de rollos + carrusel de filtros de la categoría elegida. */
+@Composable
+fun LookPicker(state: StudioState, thumbnails: Map<String, ImageBitmap>? = null) {
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(LookCategory.entries) { cat ->
+            OptionChip(cat.label, cat == state.category) { state.category = cat }
+        }
+    }
+    LookCarousel(
+        looks = FilmLooks.inCategory(state.category),
+        selected = state.look,
+        onSelect = { state.select(it) },
+        thumbnails = thumbnails,
+    )
+}
+
 /** Carrusel horizontal de filtros. */
 @Composable
 fun LookCarousel(
+    looks: List<FilmLook>,
     selected: FilmLook,
     onSelect: (FilmLook) -> Unit,
     thumbnails: Map<String, ImageBitmap>? = null,
@@ -106,13 +133,17 @@ fun LookCarousel(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        items(FilmLooks.all, key = { it.id }) { look ->
+        items(looks, key = { it.id }) { look ->
             val isSel = look.id == selected.id
+            val view = LocalView.current
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .width(68.dp)
-                    .clickable { onSelect(look) },
+                    .width(76.dp)
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        onSelect(look)
+                    },
             ) {
                 val shape = RoundedCornerShape(10.dp)
                 Box(

@@ -58,7 +58,7 @@ class GlProcessor private constructor(private val assets: AssetManager) : Surfac
     val executor: Executor = Executor { handler.post(it) }
 
     @Volatile var mode = Mode.FILM
-    @Volatile var look: FilmLook = FilmLooks.DORADO
+    @Volatile var look: FilmLook = FilmLooks.PORTRA_400
     @Volatile var seed: Long = 1L
     @Volatile var vhsDamage = 0.35f
     @Volatile var vhsOsd = true
